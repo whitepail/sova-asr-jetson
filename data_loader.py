@@ -18,11 +18,10 @@ def load_audio(path, sample_rate):
     sound = sound.set_channels(1)
     sound = sound.set_sample_width(2)
 
-    return np.array(sound.get_array_of_samples()).astype(float)
+    return sound
 
 
-def preprocess(audio_path, sample_rate=16000, window_size=0.02, window_stride=0.01, window='hamming'):
-    audio = load_audio(audio_path, sample_rate)
+def preprocess(audio, sample_rate=16000, window_size=0.02, window_stride=0.01, window='hamming'):
     nfft = int(sample_rate * window_size)
     win_length = nfft
     hop_length = int(sample_rate * window_stride)

@@ -1,8 +1,11 @@
 Flask==1.1.2
 gunicorn==20.0.4
+requests==2.26.0
 numpy==1.19.5
 scipy==1.5.4
 pydub==0.25.1
 h5py==3.1.0
 colorama==0.4.4
 Levenshtein==0.12.0
+python-docx==0.8.11
+webrtcvad==2.0.10

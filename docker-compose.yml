@@ -10,13 +10,11 @@ services:
     runtime: nvidia
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
-
     image: sova-asr:master
     volumes:
       - .:/sova-asr
-    command: bash -c "gunicorn --access-logfile - -w 1 --bind 0.0.0.0:8888 app:app --timeout 15000"
-    ports:
-      - 8888:8888
+    command: bash -c "gunicorn --access-logfile - -w 2 --bind 0.0.0.0:8888 app:app --timeout 15000"
+    network_mode: host
 
   sova-asr-train:
     restart: "no"
@@ -31,3 +29,27 @@ services:
     volumes:
       - .:/sova-asr
     command: bash -c "python3 train.py"
+
+  sova-asr-decoder:
+    restart: always
+    container_name: sova-asr-decoder
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sova-asr:master
+    volumes:
+      - .:/sova-asr
+    command: bash -c "gunicorn --access-logfile - -w 4 --bind 0.0.0.0:8889 decoder_app:app --timeout 15000"
+    network_mode: host
+
+  sova-asr-punctuator:
+    restart: always
+    container_name: sova-asr-punctuator
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sova-asr:master
+    volumes:
+      - .:/sova-asr
+    command: bash -c "gunicorn --access-logfile - -w 2 --bind 0.0.0.0:8890 punctuator_app:app --timeout 15000"
+    network_mode: host

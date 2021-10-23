@@ -59,7 +59,7 @@ class GreedyDecoder:
 
 
 class TrieDecoder:
-    def __init__(self, lexicon, tokens, lm_path, beam_threshold=30):
+    def __init__(self, lexicon, tokens, lm_path, beam_threshold=10):
         from trie_decoder.common import Dictionary, create_word_dict, load_words
         from trie_decoder.decoder import CriterionType, DecoderOptions, KenLM, LexiconDecoder
         lexicon = load_words(lexicon)
@@ -101,12 +101,16 @@ class TrieDecoder:
 
         return trie, sil_idx, blank_idx, unk_idx
 
-    def decode(self, output, start_timestamp=0, frame_time=0.02):
+    def decode(self, output, start_timestamp=0, frame_time=0.02, max_decoder_len=500):
         output = np.log(softmax(output[:, :].astype(np.float32, copy=False), axis=-1))
 
-        t, n = output.shape
-        result = self.trieDecoder.decode(output.ctypes.data, t, n)[0]
-        tokens = result.tokens
+        results = []
+        for i in range(1 + output.shape[0] // max_decoder_len):
+            output_part = output[i * max_decoder_len:(i + 1) * max_decoder_len]
+            t, n = output_part.shape
+            results.append(self.trieDecoder.decode(output_part.ctypes.data, t, n)[0])
+
+        tokens = [token for result in results for token in result.tokens]
 
         words, new_word = [], True
         current_word, current_timestamp, start_idx, end_idx = None, start_timestamp, 0, 0
@@ -134,14 +138,15 @@ class TrieDecoder:
                         words_len += end_idx - start_idx
                         words.append({
                             "word": current_word,
-                            "start": np.round(current_timestamp, 2),
+                            "timestamp": max(0.0, np.round(current_timestamp, 2) - 0.2),
                             "end": np.round(end_timestamp, 2),
-                            "confidence": np.round(np.exp(word_lm_score / max(1, end_idx - start_idx)) * 100, 2)
+                            "confidence": np.round(np.exp(word_lm_score / max(10, end_idx - start_idx)) * 100, 2)
                         })
 
                     else:
                         current_word += self.tokenDict.get_entry(k)
 
-        score = np.round(np.exp(result.score / max(1, words_len)), 2)
+        score = np.mean([result.score for result in results])
+        score = np.round(np.exp(score / max(1, words_len)), 2)
 
         return DecodeResult(score, words)
