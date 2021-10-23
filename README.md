@@ -1,115 +1,108 @@
-# SOVA ASR
+# Система автопротоколирования конференций в онлайн режиме
 
-SOVA ASR is a fast speech recognition solution based on [Wav2Letter](https://arxiv.org/abs/1609.03193) architecture. It is designed as a REST API service and it can be customized (both code and models) for your needs.
+## Системные требования:
+Операционная система, поддерживающая работу с Docker, предпочтительно Ubuntu 20.04, минимум 16 GB RAM, минимум 4 ядра, процессор с тактовой частотой не ниже 2.50 GHz, видеокарта NVIDIA с объёмом графической памяти не меньше 8 GB, 15 GB свободного места на SSD.
 
-## Installation
+Рекомендуемая конфигурация: инстанс типа g4dn.2xlarge в AWS с Ubuntu 20.04 и 50 GB SSD.
 
-The easiest way to deploy the service is via docker-compose, so you have to install Docker and docker-compose first. Here's a brief instruction for Ubuntu:
+## Инструкция по разворачиванию:
+Клонируем репозиторий и переходим в папку проекта:
+```
+git clone https://github.com/sxdxfan/sova-asr
+cd sova-asr
+```
 
-#### Docker installation
-
-*	Install Docker:
-```bash
-$ sudo apt-get update
-$ sudo apt-get install \
+Устанавливаем Docker и docker-compose с поддержкой NVIDIA:
+```
+sudo apt-get update
+sudo apt-get install \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg-agent \
     software-properties-common
-$ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-$ sudo apt-key fingerprint 0EBFCD88
-$ sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-$ sudo apt-get update
-$ sudo apt-get install docker-ce docker-ce-cli containerd.io
-$ sudo usermod -aG docker $(whoami)
-```
-In order to run docker commands without sudo you might need to relogin.
-*   Install docker-compose:
-```
-$ sudo curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-$ sudo chmod +x /usr/local/bin/docker-compose
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository \
+    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+    $(lsb_release -cs) \
+    stable"
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+sudo usermod -aG docker $(whoami)
+sudo curl -L "https://github.com/docker/compose/releases/download/1.25.5/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | \
+    sudo apt-key add -
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list
+sudo apt-get update
+sudo apt-get install nvidia-container-runtime
+sudo echo -e '{\n    "runtimes": {\n        "nvidia": {\n            "path": "nvidia-container-runtime",\n            "runtimeArgs": []\n        }\n    },\n    "default-runtime": "nvidia"\n}' >> /etc/docker/daemon.json
+sudo systemctl restart docker.service
 ```
 
-*   (Optional) If you're planning on using CUDA run these commands:
+Скачиваем и разворачиваем веса моделей:
 ```
-$ curl -s -L https://nvidia.github.io/nvidia-container-runtime/gpgkey | \
-  sudo apt-key add -
-$ distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-$ curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | \
-  sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list
-$ sudo apt-get update
-$ sudo apt-get install nvidia-container-runtime
+wget http://dataset.sova.ai/SOVA-ASR/data.tar.gz
+tar -xvf data.tar.gz && rm data.tar.gz
 ```
-Add the following content to the file **/etc/docker/daemon.json**:
-```json
-{
-    "runtimes": {
-        "nvidia": {
-            "path": "nvidia-container-runtime",
-            "runtimeArgs": []
-        }
-    },
-    "default-runtime": "nvidia"
+
+Запускаем бэкенд часть (поднимутся сервисы на портах 8888, 8889, 8890):
+```
+sudo docker-compose build
+sudo docker-compose up -d sova-asr sova-asr-decoder sova-asr-punctuator
+```
+
+Переходим в подпапку с фронтендом и устанавливаем зависимости:
+```
+cd frontend
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+sudo apt-get update
+sudo apt-get install -y --upgrade npm node-gyp nodejs-dev libssl1.0-dev yarn
+sudo npm install -g n
+sudo n stable
+yarn install
+```
+
+Производим билд:
+```
+yarn build
+```
+
+После билда в папке фронтенда появится подпапка build, к которой необходимо указать путь в конфигурации веб сервера (например, nginx). Также необходимо сконфигурировать пути обращений к API бэкенда. Пример конфигурации nginx:
+
+```
+server {
+	index index.html index.php index.htm index.php;
+	add_header X-Frame-Options "SAMEORIGIN";
+	add_header X-Content-Type-Options "nosniff";
+	client_max_body_size 700M;
+	proxy_connect_timeout 600;
+	proxy_send_timeout 600;
+	proxy_read_timeout 600;
+	send_timeout 600;
+	location = /robots.txt {
+		add_header Content-Type text/plain;
+		return 200 "User-agent: *\nDisallow: /\n";
+	}
+	location / {
+		index index.html index.php index.htm index.php;
+		root /var/www/sova-asr/frontend/build;
+		client_max_body_size 256M;
+		try_files $uri $uri/ /index.html;
+	}
+	location /asr {
+		proxy_pass http://localhost:8888;
+		client_max_body_size 700M;
+         }
+	server_name SERVER_NAME;
+	listen 443 ssl http2; 
+	ssl_certificate SSL_CERTIFICATE; 
+	ssl_certificate_key SSL_CERTIFICATE_KEY;
+	access_log /var/log/nginx/asr-access.log;
+	error_log /var/log/nginx/asr-error.log;
 }
 ```
-Restart the service:
-```bash
-$ sudo systemctl restart docker.service
-``` 
-
-#### Build and deploy
-
-**In order to run service with pretrained models you will have to download http://dataset.sova.ai/SOVA-ASR/data.tar.gz.**
-
-*   Clone the repository, download the pretrained models archive and extract the contents into the project folder:
-```bash
-$ git clone --recursive https://github.com/sovaai/sova-asr.git
-$ cd sova-asr/
-$ wget http://dataset.sova.ai/SOVA-ASR/data.tar.gz
-$ tar -xvf data.tar.gz && rm data.tar.gz
-```
-
-*   Build docker image
-     *   If you're planning on using GPU (it is required for training and can be used for inference): build *sova-asr* image using the following command:
-     ```bash
-     $ sudo docker-compose build
-     ```
-     *   If you're planning on using CPU only: modify `Dockerfile`, `docker-compose.yml` (remove the runtime and environment sections) and `config.ini` (*cpu* should be set to 0) and build *sova-asr* image:
-     ```bash
-     $ sudo docker-compose build
-     ```
-
-*	Run web service in a docker container
-     ```bash
-     $ sudo docker-compose up -d sova-asr
-     ```
-
-## Testing
-
-To test the service you can send a POST request:
-```bash
-$ curl --request POST 'http://localhost:8888/asr' --form 'audio_blob=@"data/test.wav"'
-```
-
-## Finetuning acoustic model
-
-If you want to finetune the acoustic model you can set hyperparameters and paths to your own train and validation manifest files and run the training service.
-
-*	Set training options in *Train* section of **config.ini**. Train and validation csv manifest files should contain comma-separated audio file paths and reference texts in each line. For instance:
-     ```bash
-     data/audio/000000.wav,добрый день
-     data/audio/000001.wav,как ваши дела
-     ...
-     ```
-*	Run training in docker container:
-     ```bash
-     $ sudo docker-compose up -d sova-asr-train
-     ```
-
-## Customizations
-
-If you want to train your own acoustic model refer to [PuzzleLib tutorials](https://puzzlelib.org/tutorials/Wav2Letter/). Check [KenLM documentation](https://kheafield.com/code/kenlm/) for building your own language model. This repository was tested on Ubuntu 18.04 and has pre-built .so Trie decoder files for Python 3.6 running inside the Docker container, for modifications you can get your own .so files using [Wav2Letter++](https://github.com/facebookresearch/wav2letter) code for building Python bindings. Otherwise you can use a standard Greedy decoder (set in config.ini).
