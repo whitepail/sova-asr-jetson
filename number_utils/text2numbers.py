@@ -81,34 +81,34 @@ class TextToNumbers:
             except IndexError:
                 pass
 
-        if " и " in converted_text:
-            try:
-                for idx, val in enumerate(converted_text):
-                    if val == "и" \
-                            and converted_text[idx + 2] in ["0", "1", "2", "3", "4",
-                                                            "5", "6", "7", "8", "9"] \
-                            and converted_text[idx - 1] == " " \
-                            and converted_text[idx - 2] in ["0", "1", "2", "3", "4",
-                                                            "5", "6", "7", "8", "9"]:
+        # if " и " in converted_text:
+        #     try:
+        #         for idx, val in enumerate(converted_text):
+        #             if val == "и" \
+        #                     and converted_text[idx + 2] in ["0", "1", "2", "3", "4",
+        #                                                     "5", "6", "7", "8", "9"] \
+        #                     and converted_text[idx - 1] == " " \
+        #                     and converted_text[idx - 2] in ["0", "1", "2", "3", "4",
+        #                                                     "5", "6", "7", "8", "9"]:
 
-                        if " 0." in converted_text:
-                            converted_text = converted_text.replace("0.", ".").replace(" и ", "")
+        #                 if " 0." in converted_text:
+        #                     converted_text = converted_text.replace("0.", ".").replace(" и ", "")
 
-                            if "после запятой" in converted_text:
-                                converted_text = converted_text.replace(" после запятой", "")
+        #                     if "после запятой" in converted_text:
+        #                         converted_text = converted_text.replace(" после запятой", "")
 
-                        if "после запятой" in converted_text:
-                            converted_text = converted_text.replace(" и ", ".").replace(" после запятой", "")
+        #                 if "после запятой" in converted_text:
+        #                     converted_text = converted_text.replace(" и ", ".").replace(" после запятой", "")
 
-                        else:
-                            converted_text = converted_text.replace(" и ", ".")
-            except IndexError:
-                return converted_text
+        #                 else:
+        #                     converted_text = converted_text.replace(" и ", ".")
+        #     except IndexError:
+        #         return converted_text
 
-            try:
-                converted_text = str(np.round(np.float32(converted_text), 5))
-            except (ValueError, TypeError):
-                pass
+        #     try:
+        #         converted_text = str(np.round(np.float32(converted_text), 5))
+        #     except (ValueError, TypeError):
+        #         pass
 
         return converted_text
 

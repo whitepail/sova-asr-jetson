@@ -43,7 +43,10 @@ def write_highlighted_text(text, words, document, threshold=70):
             while words_position < len(words) and words[words_position]["word"] != token.lower():
                 words_position += 1
 
-            confidence = words[words_position]["confidence"]
+            if words_position < len(words):
+                confidence = words[words_position]["confidence"]
+            else:
+                confidence = 100
 
             if confidence < threshold:
                 font = paragraph.add_run(token).font
@@ -75,9 +78,9 @@ class FileHandler:
     @staticmethod
     def get_recognized_text(blob):
         try:
-            # filename = str(uuid.uuid4())
-            ts = time.time()
-            filename = (os.path.splitext(blob.filename)[0]).replace(" ", "_") + str(datetime.utcfromtimestamp(ts).strftime('_%Y-%m-%d_%H:%M:%S'))
+            filename = str(uuid.uuid4())
+            # ts = time.time()
+            # filename = (os.path.splitext(blob.filename)[0]).replace(" ", "_") + str(datetime.utcfromtimestamp(ts).strftime('_%Y-%m-%d_%H:%M:%S'))
             os.makedirs('./records', exist_ok=True)
             new_record_path = os.path.join('./records', filename + '.webm')
             blob.save(new_record_path)
