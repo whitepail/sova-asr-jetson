@@ -1,0 +1,73 @@
+version: '2.3'
+
+services:
+  sova-asr:
+    restart: always
+    container_name: sova-asr
+    runtime: nvidia
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ML_PORT=3000
+    image: sova-asr:torch1.11
+    volumes:
+      - ..:/sova-asr
+    command: bash -c "gunicorn --access-logfile - -w 1 --bind 0.0.0.0:8888 app:app --timeout 15000"
+    network_mode: host
+
+#  sova-asr-train:
+#    restart: "no"
+#    container_name: sova-asr-train
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    runtime: nvidia
+#    environment:
+#      - NVIDIA_VISIBLE_DEVICES=all
+#    image: sova-asr:master
+#    volumes:
+#      - .:/sova-asr
+#    command: bash -c "python3 train.py"
+
+  sova-asr-decoder:
+    restart: always
+    container_name: sova-asr-decoder
+    image: sova-asr:torch1.11
+    volumes:
+      - ..:/sova-asr
+    runtime: nvidia
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ML_PORT=3000
+    command: bash -c "gunicorn --access-logfile - -w 2 --bind 0.0.0.0:8889 decoder_app:app --timeout 15000"
+    network_mode: host
+
+#  sova-asr-bash:
+#    restart: "no"
+#    container_name: sova-asr
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    image: sova-asr:master
+#    volumes:
+#      - .:/sova-asr
+#    command: bash
+#
+#
+#  sova-asr-punctuator:
+#    restart: always
+#    container_name: sova-asr-punctuator
+#    runtime: nvidia
+#    environment:
+#      - NVIDIA_VISIBLE_DEVICES=all
+#      - ML_PORT=3000
+#    image: sova-asr:master
+#    volumes:
+#      - .:/sova-asr
+#    command: bash -c "gunicorn --access-logfile - -w 2 --bind 0.0.0.0:8890 punctuator_app:app --timeout 15000"
+#    network_mode: host
