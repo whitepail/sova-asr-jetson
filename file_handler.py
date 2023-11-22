@@ -88,17 +88,17 @@ class FileHandler:
             converted_record_path = FileHandler.convert_to_wav(new_record_path, audio_file)
             response_models_result = FileHandler.get_models_result(converted_record_path)
 
-            document = Document()
-            document.add_heading('Протокол конференции', level=1)
-            for result in response_models_result:
-                text = result.get('text')
-                words = result.get('words')
-                write_highlighted_text(text, words, document)
+#            document = Document()
+#            document.add_heading('Протокол конференции', level=1)
+#            for result in response_models_result:
+#                text = result.get('text')
+#                words = result.get('words')
+#                write_highlighted_text(text, words, document)
+#
+#            docx_file = filename + '.docx'
+#            document.save(f'./records/{docx_file}')
 
-            docx_file = filename + '.docx'
-            document.save(f'./records/{docx_file}')
-
-            return 0, audio_file, docx_file, response_models_result
+            return 0, audio_file, response_models_result
 
         except Exception as e:
             logging.exception(e)
@@ -143,8 +143,8 @@ class FileHandler:
             " ".join(texts[len(texts) // 2:])
         ]]
 
-        pool = ThreadPool(processes=2)
-        texts = pool.map(punctuator_request, texts)
+#        pool = ThreadPool(processes=2)
+#        texts = pool.map(punctuator_request, texts)
         text = " ".join(texts)
 
         end = time.time()
