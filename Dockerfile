@@ -16,7 +16,7 @@ RUN mv /etc/apt/sources.list.d/cuda.list /etc/apt/sources.list.d/cuda.disabled \
     && wget https://repo.download.nvidia.com/jetson/common/pool/main/c/cudnn/libcudnn7_7.6.3.28-1+cuda10.0_arm64.deb \
     && wget https://repo.download.nvidia.com/jetson/common/pool/main/c/cudnn/libcudnn7-dev_7.6.3.28-1+cuda10.0_arm64.deb \
     && dpkg -i libcudnn7_7.6.3.28-1+cuda10.0_arm64.deb libcudnn7-dev_7.6.3.28-1+cuda10.0_arm64.deb \
-    && apt-get install -y libcublas-dev libcurand-dev-10-2 cuda-nvrtc-dev-10-2 cuda-cudart-dev-10-2 \
+    && apt-get install -y libcublas-dev libcurand-dev-10-2 cuda-nvrtc-dev-10-2 cuda-cudart-dev-10-2 cuda-libraries-dev-10-2 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f libcudnn7_7.6.3.28-1+cuda10.0_arm64.deb libcudnn7-dev_7.6.3.28-1+cuda10.0_arm64.deb \
@@ -37,5 +37,7 @@ COPY h5py-3.1.0-cp36-cp36m-linux_aarch64.whl .
 RUN pip3 install --upgrade pip \
     && pip3 --no-cache-dir install -r requirements.txt \
     && pip3 install h5py-3.1.0-cp36-cp36m-linux_aarch64.whl \
+    && ln -s /usr/local/cuda-10.2/targets/aarch64-linux/lib/stubs/libcuda.so /usr/lib/aarch64-linux-gnu/libcuda.so \
     && pip3 install PuzzleLib==1.0.3a0 --install-option="--backend=cuda" --install-option="--no-runtime-check" \
+    && rm -f /usr/lib/aarch64-linux-gnu/libcuda.so \
     && rm -rf $PROJECT_DIR/*

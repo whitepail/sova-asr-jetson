@@ -47,6 +47,18 @@ services:
     command: bash -c "gunicorn --access-logfile - -w 4 --bind 0.0.0.0:8889 decoder_app:app --timeout 15000"
     network_mode: host
 
+#  sova-asr-bash:
+#    restart: "no"
+#    container_name: sova-asr
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    image: sova-asr:master
+#    volumes:
+#      - .:/sova-asr
+#    command: bash
+#
+#
 #  sova-asr-punctuator:
 #    restart: always
 #    container_name: sova-asr-punctuator
